@@ -105,10 +105,11 @@ This script will generate a CSV with all the different ICAO numbers in it.
 
 # References
 1. "*Gr-Air-Modes*", **Nick Foster**, 2012
-2. "*EXPLOITING THE AUTOMATIC DEPENDENT SURVEILLANCE BROADCAST SYSTEM VIA FALSE TARGET INJECTION*", **Domenic Magazu III**, 2012
-3. "*ADS-B out by HACKRF and received over the air by rtl-sdr dongle and dump1090*", **Jiao Xianjun**, 2014
-4. "*Ghost in the Air(Trafﬁc): On insecurity of ADS-B protocol and practical attacks on ADS-B devices*", **Andrei Costin and Aurelien Francillon**, 2015
-5. "*ADS-B Decoding Guide*", **Junzi Sun**, 2017
+1. "*EXPLOITING THE AUTOMATIC DEPENDENT SURVEILLANCE BROADCAST SYSTEM VIA FALSE TARGET INJECTION*", **Domenic Magazu III**, 2012
+1. "*ADS-B out by HACKRF and received over the air by rtl-sdr dongle and dump1090*", **Jiao Xianjun**, 2014
+1. "*Ghost in the Air(Trafﬁc): On insecurity of ADS-B protocol and practical attacks on ADS-B devices*", **Andrei Costin and Aurelien Francillon**, 2015
+1. "*ADS-B Decoding Guide*", **Junzi Sun**, 2017
+1. "*Inside Radio: An Attack and Defense Guide*", **Qing Yang & Lin Huang**, 2018
 
 # History
 This is a fork orginally from https://github.com/lyusupov/ADSB-Out in September 2017. 
