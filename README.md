@@ -7,10 +7,10 @@ This repository contains "ADS-B Out" encoder for Tx-capable SDR hardware.
 It is currently written in architecture independent Python language and can be used as an add-on for existing
 open source "ADS-B In" solutions. One known good example is [Stratux](https://github.com/cyoung/stratux).
 
-## Disclaimer
+# Disclaimer
 The source code is published for academic purpose only.
 
-## Instructions
+# Instructions
 1. Execute *ADSB_Encoder.py* all the options have defaults so none are needed to generate with defaults. Running help will show you the optiosn you can change:
 ```
 $ ./ADSB_Encoder.py
@@ -91,14 +91,19 @@ $
  * -f is the frequency in hertz. In the real world this would be 1090000000 but do not use that
  * -s is the sample rate in hertz
  * -x is the gain
-## Validation
+3. Receive the Signal
 ```
 $ sudo ./dump1090 --net --freq 915000000
 ...
 ```
 ![](https://github.com/lyusupov/ADSB-Out/raw/master/documents/images/dump1090.JPG)
 
-## References
+# Generate CSV files
+These CSV files can be used for input into the application
+## generateAllICAO.py
+This script will generate a CSV with all the different ICAO numbers in it.
+
+# References
 1. "*Gr-Air-Modes*", **Nick Foster**, 2012
 2. "*EXPLOITING THE AUTOMATIC DEPENDENT SURVEILLANCE BROADCAST SYSTEM VIA FALSE TARGET INJECTION*", **Domenic Magazu III**, 2012
 3. "*ADS-B out by HACKRF and received over the air by rtl-sdr dongle and dump1090*", **Jiao Xianjun**, 2014
