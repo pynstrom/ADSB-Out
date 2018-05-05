@@ -101,8 +101,12 @@ def manyPlanes(arguments):
                     row['latitude'] = float(row['latitude'])
                 if not 'longitude' in row.keys():
                     row['longitude'] = arguments.longitude
+                else:
+                    row['longitude'] = float(row['longitude'])
                 if not 'altitude' in row.keys():
                     row['altitude'] = arguments.altitude
+                else:
+                    row['altitude'] = float(row['altitude'])
                 if not 'capability' in row.keys():
                     row['capability'] = arguments.capability
                 if not 'typecode' in row.keys():
