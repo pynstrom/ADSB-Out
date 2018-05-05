@@ -90,13 +90,15 @@ def manyPlanes(arguments):
     for i in range(0, arguments.repeats):
         with open(arguments.csvfile, newline='') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=',')
-            for row in reader:                
+            for row in reader:        
                 if not 'icao' in row.keys():
                     row['icao'] = arguments.icao
                 else:
                     row['icao'] = int(row['icao'], 0)
                 if not 'latitude' in row.keys():
                     row['latitude'] = arguments.latitude
+                else:
+                    row['latitude'] = float(row['latitude'])
                 if not 'longitude' in row.keys():
                     row['longitude'] = arguments.longitude
                 if not 'altitude' in row.keys():

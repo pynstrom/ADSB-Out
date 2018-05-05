@@ -6,3 +6,5 @@
 generated/
 allICAO.py
 hackRFAllICAO.sh
+allLat.py
+hackRFAllLat.sh

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Will generate a CSV with all ICAOS
+# Will generate a CSV with all Latitudes
 import csv
 import os
 
@@ -8,7 +8,7 @@ def writeFile(directory, filename, filenameExtension, data, count):
     csvFilename = os.path.join(directory, "%s-%s.%s"%(filename, count, filenameExtension))
     with open(csvFilename, 'w', newline='') as csvfile:
         output = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        output.writerow(['icao'])
+        output.writerow(['latitude'])
         for row in data:
             output.writerow([row])
         csvfile.close()
@@ -16,15 +16,16 @@ def writeFile(directory, filename, filenameExtension, data, count):
 
 def main():
     directory = 'generated'
-    filename = 'allICAO'
+    filename = 'allLat'
     filenameExtension = 'csv'
-    scriptFilename = 'allICAO.py'
-    hackRFScriptFilename = 'hackRFAllICAO.sh'
+    scriptFilename = 'allLat.py'
+    hackRFScriptFilename = 'hackRFAllLat.sh'
 
-    minICAO = 0x0
-    maxICAO = 0x3E8
-    # If the number of planes is less than the split it doesn't work
+    minLat = -90
+    maxLat = 90
+    # If the number of lat is less than the split it doesn't work
     splitNumber = 100
+    step = 0.1
 
     try:
         os.stat(directory)
@@ -41,21 +42,21 @@ def main():
     hackRFScript.write('#!/bin/bash\n')
     
     
-    i = minICAO
+    i = minLat
     j = 0
     k = 0
     data = []
      
     files = ''
-    while i <= maxICAO:
+    while i <= maxLat:
         if j == splitNumber:
             files += writeFile(directory, filename, filenameExtension, data, k)
             data = []
             hackRFScript.write("hackrf_transfer -t %s-%s.iq8s -f 915000000 -s 2000000 -x 10\n" % (filename, k))
             k += 1
             j = 0            
-        data.append(hex(i))
-        i += 1
+        data.append(i)
+        i += step
         j += 1
     files += writeFile(directory, filename, filenameExtension, data, k)
     data = []
