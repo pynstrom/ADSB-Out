@@ -84,7 +84,7 @@ def singlePlane(arguments):
     return samples
 
 def manyPlanes(arguments):
-    logger.info('Processing CSV file')    
+    logger.info('Processing CSV file: %s' % (arguments.csvfile))    
     samples = bytearray()
     logger.info('Repeating the message %s times' % (arguments.repeats))
     for i in range(0, arguments.repeats):
@@ -169,7 +169,8 @@ def threadingCSV(csv):
     global logger
     logging.config.fileConfig('logging.cfg')
     logger = logging.getLogger(__name__)
-    logger.info('Starting ADSB Encoder')
+    logger.info('Starting ADSB Encoder threadingCSV entry point')
+    logger.debug('Being called with the following CSV file: %s' % (csv[0]))
     logger.debug('The arguments: %s' % (arguments))
     data = None
     if arguments.csvfile == '':

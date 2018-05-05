@@ -23,7 +23,8 @@ def main():
 
     minICAO = 0x0
     maxICAO = 0x3E8
-    splitNumber = 10000
+    # If the number of planes is less than the split it doesn't work
+    splitNumber = 100
 
     try:
         os.stat(directory)
