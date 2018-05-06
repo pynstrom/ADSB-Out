@@ -12,7 +12,7 @@ def writeFile(directory, filename, filenameExtension, data, count):
         for row in data:
             output.writerow([row])
         csvfile.close()
-        return "['%s', '%s-%s.iq8s'],"%(csvFilename, filename, count)
+        return "{'csv':'%s', 'out':'%s-%s.iq8s'},"%(csvFilename, filename, count)
 
 def main():
     directory = 'generated'
@@ -23,8 +23,7 @@ def main():
 
     minICAO = 0x0
     maxICAO = 0x3E8
-    # If the number of planes is less than the split it doesn't work
-    splitNumber = 100
+    splitNumber = 1000
 
     try:
         os.stat(directory)
@@ -63,7 +62,7 @@ def main():
     k += 1
     j = 0    
     files = files[:-1]
-    script.write('files = (%s)\n' % (files))
+    script.write('files = [%s]\n' % (files))
     script.write('for file in files:\n')
     script.write('    t = threading.Thread(target=threadingCSV, args=(file,))\n')
     script.write('    t.start()\n')

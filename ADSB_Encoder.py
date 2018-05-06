@@ -168,15 +168,14 @@ def threadingCSV(csv):
     global cfg
     cfg = configparser.ConfigParser()
     cfg.read('config.cfg')
-    
     arguments = argParser()
-    arguments.csvfile = csv[0]
-    arguments.outputfilename = csv[1]
+    arguments.csvfile = csv['csv']
+    arguments.outputfilename = csv['out']
     global logger
     logging.config.fileConfig('logging.cfg')
     logger = logging.getLogger(__name__)
     logger.info('Starting ADSB Encoder threadingCSV entry point')
-    logger.debug('Being called with the following CSV file: %s' % (csv[0]))
+    logger.debug('Being called with the following CSV file: %s' % (arguments.csvfile))
     logger.debug('The arguments: %s' % (arguments))
     data = None
     if arguments.csvfile == '':
