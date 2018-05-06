@@ -8,3 +8,5 @@ allICAO.py
 hackRFAllICAO.sh
 allLat.py
 hackRFAllLat.sh
+allAlt.py
+hackRFAllAlt.sh

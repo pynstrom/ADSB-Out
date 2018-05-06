@@ -17,7 +17,7 @@ class ModeS:
         location = ModeSLocation()
         enc_alt =	location.encode_alt_modes(alt, surface)
         #print "Alt(%r): %X " % (surface, enc_alt)
-
+        
         #encode that position
         (evenenclat, evenenclon) = location.cpr_encode(lat, lon, False, surface)
         (oddenclat, oddenclon)   = location.cpr_encode(lat, lon, True, surface)

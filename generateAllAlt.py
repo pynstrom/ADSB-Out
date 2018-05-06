@@ -8,7 +8,7 @@ def writeFile(directory, filename, filenameExtension, data, count):
     csvFilename = os.path.join(directory, "%s-%s.%s"%(filename, count, filenameExtension))
     with open(csvFilename, 'w', newline='') as csvfile:
         output = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        output.writerow(['latitude'])
+        output.writerow(['altitude'])
         for row in data:
             output.writerow([row])
         csvfile.close()
@@ -16,15 +16,15 @@ def writeFile(directory, filename, filenameExtension, data, count):
 
 def main():
     directory = 'generated'
-    filename = 'allLat'
+    filename = 'allAlt'
     filenameExtension = 'csv'
-    scriptFilename = 'allLat.py'
-    hackRFScriptFilename = 'hackRFAllLat.sh'
+    scriptFilename = 'allAlt.py'
+    hackRFScriptFilename = 'hackRFAllAlt.sh'
 
-    minLat = -90
-    maxLat = 90
+    minAlt = -1100
+    maxAlt = 100000
     splitNumber = 1000
-    step = 0.1
+    step = 1
 
     try:
         os.stat(directory)
@@ -41,13 +41,13 @@ def main():
     hackRFScript.write('#!/bin/bash\n')
     
     
-    i = minLat
+    i = minAlt
     j = 0
     k = 0
     data = []
      
     files = ''
-    while i <= maxLat:
+    while i <= maxAlt:
         if j == splitNumber:
             files += writeFile(directory, filename, filenameExtension, data, k)
             data = []

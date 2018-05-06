@@ -30,9 +30,18 @@ class ModeSLocation:
 # Further work on fork
 # Copyright (C) 2017 David Robinson
     def encode_alt_modes(self, alt, bit13):
+        # need to better understand as the >50175 feet not working
+        # TODO >50175 feet
         mbit = False
         qbit = True
-        encalt = int((int(alt) + 1000) / 25)
+        # For altitudes -1000<=X<=50175 feet, set bit 8 AKA the Q bit to true which means 25 feet resoulution
+        # For >50175 set the qbit to False and use 100 feet resoultion
+        if alt > 50175:
+            qbit = False
+            encalt = int((int(alt) + 1000) / 100)
+        else:
+            qbit = True
+            encalt = int((int(alt) + 1000) / 25)
 
         if bit13 is True:
             tmp1 = (encalt & 0xfe0) << 2
