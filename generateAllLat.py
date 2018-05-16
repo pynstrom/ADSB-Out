@@ -24,7 +24,7 @@ def main():
     minLat = -90
     maxLat = 90
     splitNumber = 1000
-    step = 0.1
+    step = 0.05
 
     try:
         os.stat(directory)
