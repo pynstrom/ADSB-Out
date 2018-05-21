@@ -1,6 +1,7 @@
 *.iq8s
 *.pyc
 *.log*
+*.csv
 
 # Don't include the generated CSV related files
 generated/
