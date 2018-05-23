@@ -17,6 +17,16 @@ def argParser():
     parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str,  dest='csvfile', help='The name of the FR24 CSV file', required=True)  
     return parser.parse_args()
 
+def reverseCSV(csvfile):
+    """Reverse a CSV. Returns a dictionary of the CSV"""
+    data = []
+    with open(csvfile, newline='') as csvfilein:
+        reader = csv.DictReader(csvfilein, delimiter=',')
+        for row in reader:
+            data.append(row)
+    csvfilein.close()
+    return reversed(data)
+
 def main():
     global cfg
     cfg = configparser.ConfigParser()
@@ -27,19 +37,19 @@ def main():
     csvFilename = 'fr24.csv'
     
     time = 0
-    
+    #Need to reverse the FR24 CSV as it is in reverse order i.e. the most recent record is row 2 and the first ADS-B message of the flight is the last row in the CSV
+    data = reverseCSV(arguments.csvfile)
     with open(csvFilename, 'w', newline='') as csvfileout:
-        output = csv.writer(csvfileout, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        output.writerow(['time', 'icao', 'latitude', 'longitude', 'altitude'])
-        with open(arguments.csvfile, newline='') as csvfilein:
-            reader = csv.DictReader(csvfilein, delimiter=',')
-            for row in reader:
-                if time == 0:
-                    time = int(row['Timestamp'])
-                rowtime = int(row['Timestamp']) - time
-                newrow = [rowtime, hex(arguments.icao), 'lat', 'long', row['Altitude']]
-                output.writerow([newrow])
-                print(newrow)
+        fieldnames = ['timestamp', 'icao', 'latitude', 'longitude', 'altitude']
+        output = csv.DictWriter(csvfileout, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL, fieldnames=fieldnames)
+        output.writeheader()
+        for row in data:
+            if time == 0:
+                time = int(row['Timestamp'])
+            rowtime = int(row['Timestamp']) - time
+            position = row['Position'].split(',')
+            newrow = {'timestamp':rowtime, 'icao':hex(arguments.icao), 'latitude':position[0], 'longitude':position[1], 'altitude':row['Altitude']}
+            output.writerow(newrow)
         csvfileout.close()
 
     

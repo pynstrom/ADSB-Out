@@ -105,8 +105,10 @@ def manyPlanes(arguments):
                     row['longitude'] = float(row['longitude'])
                 if not 'altitude' in row.keys():
                     row['altitude'] = arguments.altitude
+                    print('here')
                 else:
                     row['altitude'] = float(row['altitude'])
+                    print('there')
                 if not 'capability' in row.keys():
                     row['capability'] = arguments.capability
                 if not 'typecode' in row.keys():
@@ -121,6 +123,7 @@ def manyPlanes(arguments):
                     row['surface'] = arguments.surface
                 logger.debug('Row from CSV: %s' % (row))
                 modes = ModeS()
+                print(row['altitude'])
                 (df17_even, df17_odd) = modes.df17_pos_rep_encode(row['capability'], row['icao'], row['typecode'], row['surveillancestatus'], row['nicsupplementb'], row['altitude'], row['time'], row['latitude'], row['longitude'], row['surface'])
 
                 ppm = PPM()
