@@ -60,11 +60,9 @@ def argParser():
     parser.add_argument('-s', '--surface', action='store', default=cfg.getboolean('plane', 'surface'), type=auto_bool, dest='surface', help='If the plane is on the ground or not. Default: %(default)s')
     parser.add_argument('-o', '--out', '--output', action='store', type=str, default=cfg.get('general', 'outputfilename'), dest='outputfilename', help='The iq8s output filename. This is the file which you will feed into the hackRF. Default: %(default)s')
     parser.add_argument('-r', '--repeats', action='store', dest='repeats', type=int, default=cfg.getint('general', 'repeats'), help='How many repeats of the data to perform. Default: %(default)s')
-    parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str, default=cfg.get('general', 'csvfile'), dest='csvfile', help='Import a CSV file with the plane data in it. Default: %(default)s')    
+    parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str, default=cfg.get('general', 'csvfile'), dest='csvfile', help='Import a CSV file with the plane data in it. Default: %(default)s')
+    parser.add_argument('--intermessagegap', action='store', type=int, default=cfg.get('general', 'intermessagegap'), dest='intermessagegap', help='When repeating or reading a CSV the number of microseconds between messages. Default: %(default)s')
     # TODO Make it so it can do a static checksum
-    # TODO Get pause between messages
-    # TODO Get pause between repeats
-    # TODO Do a pause function
     return parser.parse_args()
 
 def singlePlane(arguments):
@@ -81,16 +79,19 @@ def singlePlane(arguments):
         hackrf = HackRF()
         samples_array = hackrf.hackrf_raw_IQ_format(df17_array)
         samples = samples+samples_array
+        gap_array = ppm.addGap(arguments.intermessagegap)
+        samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
+        samples = samples+samples_array
     return samples
 
 def manyPlanes(arguments):
-    logger.info('Processing CSV file: %s' % (arguments.csvfile))    
+    logger.info('Processing CSV file: %s' % (arguments.csvfile))
     samples = bytearray()
     logger.info('Repeating the message %s times' % (arguments.repeats))
     for i in range(0, arguments.repeats):
         with open(arguments.csvfile, newline='') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=',')
-            for row in reader:        
+            for row in reader:
                 if not 'icao' in row.keys():
                     row['icao'] = arguments.icao
                 else:
@@ -129,6 +130,9 @@ def manyPlanes(arguments):
                 hackrf = HackRF()
                 samples_array = hackrf.hackrf_raw_IQ_format(df17_array)
                 samples = samples+samples_array
+                gap_array = ppm.addGap(arguments.intermessagegap)
+                samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
+                samples = samples+samples_array
     return samples
 
 def writeOutputFile(filename, data):
@@ -138,11 +142,11 @@ def writeOutputFile(filename, data):
     SamplesFile.write(data)
     SamplesFile.close()
     os.system('sync')
-    os.system('rm %s' % (filename)) 
+    os.system('rm %s' % (filename))
     logger.info('dd for file: %s' % (filename))
-    os.system("dd if=%s of=%s bs=4k seek=63 > /dev/null 2>&1" % (tmpfile, filename)) 
+    os.system("dd if=%s of=%s bs=4k seek=63 > /dev/null 2>&1" % (tmpfile, filename))
     os.system('sync')
-    os.system('rm %s'%(tmpfile))   
+    os.system('rm %s'%(tmpfile))
 
 def main():
     global cfg
@@ -188,6 +192,3 @@ def threadingCSV(csv):
 if __name__ == "__main__":
     main()
     
-
-
-
