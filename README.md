@@ -103,6 +103,26 @@ These CSV files can be used for input into the application
 ## generateAllICAO.py
 This script will generate a CSV with all the different ICAO numbers in it.
 
+# Import FlightRadar24 CSV files
+This script will take a FR24 CSV files and convert it ready for import into ADSB_Encoder.py. It outputs a file called fr24.csv.
+```
+$ ./FR24csv.py --csv <exportFromFR24.csv>
+$ ./ADSB_Encoder.py --csv fr24.csv
+
+$ ./FR24csv.py --help
+usage: FR24csv.py [-h] [-i ICAO] --csv CSVFILE
+
+This script will take a FR24 CSV file and convert it into a format for
+FR24csv.py
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i ICAO, --icao ICAO  The ICAO number for the plane in hex. Ensure the ICAO
+                        is prefixed with '0x' to ensure this is parsed as a
+                        hex number. This is 24 bits long. Default: 0x75008F
+  --csv CSVFILE, --csvfile CSVFILE, --in CSVFILE, --input CSVFILE
+                        The name of the FR24 CSV file
+```
 # References
 1. "*Gr-Air-Modes*", **Nick Foster**, 2012
 1. "*EXPLOITING THE AUTOMATIC DEPENDENT SURVEILLANCE BROADCAST SYSTEM VIA FALSE TARGET INJECTION*", **Domenic Magazu III**, 2012

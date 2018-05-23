@@ -11,7 +11,7 @@ def auto_int(x):
     return int(x, 0)
 
 def argParser():
-    description = 'This script will take a FR24 CSV file and convert it into a format for ADSB_Encoder.py'
+    description = 'This script will take a FR24 CSV file and convert it into a format for FR24csv.py'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-i', '--icao', action='store', type=auto_int, dest='icao', default=cfg.get('plane', 'icao'), help='The ICAO number for the plane in hex. Ensure the ICAO is prefixed with \'0x\' to ensure this is parsed as a hex number. This is 24 bits long. Default: %(default)s')
     parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str,  dest='csvfile', help='The name of the FR24 CSV file', required=True)  
