@@ -46,3 +46,16 @@ class PPM:
         #print '[{}]'.format(', '.join(hex(x) for x in ppm))
         
         return bytearray(ppm)
+        
+    def addGap(self, gap):
+        """
+        This function will add dead air as a gap between messages
+        Args:
+            gap: The number of microseconds to have as a gap
+        Returns:
+            The bytearray of the PPM data
+        """
+        ppm = [ ]
+        for i in range(gap):    # pause
+            ppm.append( 0 )
+        return bytearray(ppm)

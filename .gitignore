@@ -1,6 +1,10 @@
 *.iq8s
 *.pyc
 *.log*
+*.csv
+
+# Keep the example CSV
+!example.csv
 
 # Don't include the generated CSV related files
 generated/
