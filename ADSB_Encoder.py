@@ -62,6 +62,7 @@ def argParser():
     parser.add_argument('-r', '--repeats', action='store', dest='repeats', type=int, default=cfg.getint('general', 'repeats'), help='How many repeats of the data to perform. Default: %(default)s')
     parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str, default=cfg.get('general', 'csvfile'), dest='csvfile', help='Import a CSV file with the plane data in it. Default: %(default)s')
     parser.add_argument('--intermessagegap', action='store', type=int, default=cfg.get('general', 'intermessagegap'), dest='intermessagegap', help='When repeating or reading a CSV the number of microseconds between messages. Default: %(default)s')
+    parser.add_argument('--realtime', action='store', default=cfg.getboolean('general', 'realtime'), type=auto_bool, dest='realtime', help='When running a CSV which has a timestamp column whether to run in realtime following the timestamp or if just follow intermessagegap. If realtime is set it will override intermessagegap. Default: %(default)s')
     # TODO Make it so it can do a static checksum
     return parser.parse_args()
 
@@ -88,10 +89,12 @@ def manyPlanes(arguments):
     logger.info('Processing CSV file: %s' % (arguments.csvfile))
     samples = bytearray()
     logger.info('Repeating the message %s times' % (arguments.repeats))
+    prevtimestamp = 0
     for i in range(0, arguments.repeats):
         with open(arguments.csvfile, newline='') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=',')
             for row in reader:
+                gap = arguments.intermessagegap
                 if not 'icao' in row.keys():
                     row['icao'] = arguments.icao
                 else:
@@ -120,6 +123,11 @@ def manyPlanes(arguments):
                     row['time'] = arguments.time
                 if not 'surface' in row.keys():
                     row['surface'] = arguments.surface
+                if 'timestamp' in row.keys():
+                    if arguments.realtime:
+                        gap = int(row['timestamp']) - prevtimestamp
+                        gap = gap * 100000
+                        prevtimestamp = int(row['timestamp'])
                 logger.debug('Row from CSV: %s' % (row))
                 modes = ModeS()
                 (df17_even, df17_odd) = modes.df17_pos_rep_encode(row['capability'], row['icao'], row['typecode'], row['surveillancestatus'], row['nicsupplementb'], row['altitude'], row['time'], row['latitude'], row['longitude'], row['surface'])
@@ -130,7 +138,7 @@ def manyPlanes(arguments):
                 hackrf = HackRF()
                 samples_array = hackrf.hackrf_raw_IQ_format(df17_array)
                 samples = samples+samples_array
-                gap_array = ppm.addGap(arguments.intermessagegap)
+                gap_array = ppm.addGap(gap)
                 samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
                 samples = samples+samples_array
     return samples
