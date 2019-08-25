@@ -63,7 +63,8 @@ def argParser():
     parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str, default=cfg.get('general', 'csvfile'), dest='csvfile', help='Import a CSV file with the plane data in it. Default: %(default)s')
     parser.add_argument('--intermessagegap', action='store', type=int, default=cfg.get('general', 'intermessagegap'), dest='intermessagegap', help='When repeating or reading a CSV the number of microseconds between messages. Default: %(default)s')
     parser.add_argument('--realtime', action='store', default=cfg.getboolean('general', 'realtime'), type=auto_bool, dest='realtime', help='When running a CSV which has a timestamp column whether to run in realtime following the timestamp or if just follow intermessagegap. If realtime is set it will override intermessagegap. Default: %(default)s')
-    # TODO Make it so it can do a static checksum
+    # TODO Make it so it can do a static checksum or one/two bit error
+    # TODO Velocity, Heading and vertical speed as argument
     return parser.parse_args()
 
 def singlePlane(arguments):
@@ -74,7 +75,7 @@ def singlePlane(arguments):
         modes = ModeS()
         (df17_pos_even, df17_pos_odd) = modes.df17_pos_rep_encode(arguments.capability, arguments.icao, arguments.typecode, arguments.surveillancestatus, arguments.nicsupplementb, arguments.altitude, arguments.time, arguments.latitude, arguments.longitude, arguments.surface)
         
-        df17_velocity = modes.vel_heading_encode(arguments.capability, arguments.icao)
+        df17_velocity = modes.vel_heading_encode(arguments.capability, arguments.icao, 450, 200, -1000)
         
         ppm = PPM()
         df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)
@@ -142,7 +143,7 @@ def manyPlanes(arguments):
                 modes = ModeS()
                 (df17_pos_even, df17_pos_odd) = modes.df17_pos_rep_encode(row['capability'], row['icao'], row['typecode'], row['surveillancestatus'], row['nicsupplementb'], row['altitude'], row['time'], row['latitude'], row['longitude'], row['surface'])
                 
-                df17_velocity = modes.vel_heading_encode(row['capability'], row['icao'])
+                df17_velocity = modes.vel_heading_encode(row['capability'], row['icao'], 450, 200, -1000)
                 
                 ppm = PPM()
                 df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)

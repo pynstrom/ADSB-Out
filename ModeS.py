@@ -1,5 +1,6 @@
 from ModeSLocation import ModeSLocation
 import math
+import numpy
 ###############################################################
 # Further work on fork
 # Copyright (C) 2017 David Robinson
@@ -73,37 +74,62 @@ class ModeS:
         return (df17_even_bytes, df17_odd_bytes)
 
     #From https://github.com/jaywilhelm/ADSB-Out_Python on 2019-08-18
-    def vel_heading_encode(self, ca, icao):
+    # TODO There is something up with the math and rounding or something need work on this more and understand the math actually going on
+    def vel_heading_encode(self, ca, icao, in_velocity, in_heading_deg, vertical_rate):
         #(ca,icao,ew_dir,ew_vel,ns_dir,ns_vel)
         df = 17
         #ca = 5
-
 
         #1-5    downlink format
         #6-8    CA capability
         #9-32   ICAO
         #33-88  DATA -> 33-87 w/ 33-37 TC
         #89-112 Parity
+        in_heading_rad = numpy.deg2rad(in_heading_deg)
+        V_EW = abs(int(in_velocity*numpy.sin(in_heading_rad)))
+        V_NS = abs(int(in_velocity*numpy.cos(in_heading_rad)))
+
+        quadrant = numpy.floor(in_heading_deg / 90)
+
+        if(quadrant == 0):
+            S_EW = 1
+            S_NS = 1
+        elif(quadrant == 1):
+            S_EW = 0
+            S_NS = 1
+        elif(quadrant == 2):
+            S_EW = 0
+            S_NS = 0
+        else:
+            S_EW = 1
+            S_NS = 0
+
+        S_Vr = 1
+        Vr = int(vertical_rate)
+
+        if(vertical_rate < 0):
+            Vr = -Vr
+            S_Vr = 0
 
         tc = 19     #33-37  1-5 type code
         st = 0x01   #38-40  6-8 subtype, 3 air, 1 ground speed
         ic = 0 #      #41     9 intent change flag
         resv_a = 0#1  #42     10
         NAC = 2#0     #43-45  11-13 velocity uncertainty
-        S_EW = 1#1    #46     14
-        V_EW = 97#9    #47-56  15-24
-        S_NS = 0#1    #57     25 north-south sign
-        V_NS = 378#0xA0 #58-67  26-35 160 north-south vel
+        #S_EW = 1#1    #46     14
+        #V_EW = 97#9    #47-56  15-24
+        #S_NS = 0#1    #57     25 north-south sign
+        #V_NS = 379#0xA0 #58-67  26-35 160 north-south vel
         VrSrc = 1#0   #68     36 vertical rate source
-        S_Vr = 1#1    #69     37 vertical rate sign
-        Vr = 40#0x0E   #70-78  38-46 14 vertical rate
+        #S_Vr = 1#1    #69     37 vertical rate sign
+        #Vr = 41#0x0E   #70-78  38-46 14 vertical rate
         RESV_B = 0  #79-80  47-48
         S_Dif = 0   #81     49 diff from baro alt, sign
         Dif = 0x1c#0x17  #82-88  50-66 23 diff from baro alt
 
-        #ca = 5
+        ca = 5
         #icao = 0xabcdef#0xa06703 #0x485020 #
-        
+
         dfvel = []
         dfvel.append((df << 3) | ca)
         dfvel.append((icao >> 16) & 0xff)
@@ -117,16 +143,11 @@ class ModeS:
         dfvel.append(((V_NS << 5) & 0xE0) | (VrSrc << 4) | (S_Vr << 3) | ((Vr >> 6) & 0x03))
         dfvel.append(((Vr  << 2) & 0xFC) | (RESV_B))
         dfvel.append((S_Dif << 7) | (Dif))
-
         dfvel_str = "{0:02x} {1:02x} {2:02x} {3:02x} {4:02x} {5:02x} {6:02x} {7:02x} {8:02x} {9:02x} {10:02x}".format(
             *dfvel[0:11])
-        #print(dfvel_str)
         dfvel_str2 = "{0:02x}{1:02x}{2:02x}{3:02x}{4:02x}{5:02x}{6:02x}{7:02x}{8:02x}{9:02x}{10:02x}".format(
             *dfvel[0:11])
         crc_str = "%X" % self.bin2int(self.modes_crc(dfvel_str2+"000000", encode=True))
-        #print(crc_str)
-        #print(dfvel_str), " %X" % +"000000", encode=True))
-        #, "%X" % get_parity(hex2bin(dfvel_str+"000000"), extended=True))
         dfvel_crc = self.bin2int(self.modes_crc(dfvel_str2 + "000000", encode=True))
         dfvel.append((dfvel_crc >> 16) & 0xff)
         dfvel.append((dfvel_crc >> 8) & 0xff)
@@ -164,7 +185,7 @@ class ModeS:
         """
 
         GENERATOR = "1111111111111010000001001" # Currently don't know what is magic about this number
-
+        
         msgbin = list(self.hex2bin(msg))
 
         if encode:
