@@ -154,6 +154,67 @@ class ModeS:
         dfvel.append((dfvel_crc) & 0xff)
         return dfvel
 
+    #From https://github.com/jaywilhelm/ADSB-Out_Python on 2019-08-25
+    # TODO the callsign must be 8 
+    def callsign_encode(self, ca, icao, csname):
+        if len(csname) > 8 or len(csname) <= 0:
+            print ("Name length error")
+            return null
+        csname = csname.upper()
+
+        df = 17
+        #ca = 5
+        #icao = 0xabcdef
+        #csname = 'ABCD1234'
+        tc = 1
+        ec = 1
+
+        #df = 17
+        #ca = 5
+        #icao = 0x4840D6
+        #csname = 'KLM1023_'
+        #tc = 4
+        #ec = 0
+
+        map = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ#####_###############0123456789######"
+
+        dfname = []
+        dfname.append((df << 3) | ca)
+        dfname.append((icao >> 16) & 0xff)
+        dfname.append((icao >> 8) & 0xff)
+        dfname.append((icao) & 0xff)
+        #2C C3 71 C3 2C E0
+        dfname.append((tc << 3) | (ec))
+        dfname.append((0xFC & (int(map.find(csname[0])) << 2)) | (0x03 & (int(map.find(csname[1])) >> 6)))
+        dfname.append((0xF0 & (int(map.find(csname[1])) << 4)) | (0x0F & (int(map.find(csname[2])) >> 2)))
+        dfname.append((0xF0 & (int(map.find(csname[2])) << 6)) | (0x3F & (int(map.find(csname[3])) >> 0)))
+        dfname.append((0xFC & (int(map.find(csname[4])) << 2)) | (0x03 & (int(map.find(csname[5])) >> 4)))
+        dfname.append((0xF0 & (int(map.find(csname[5])) << 4)) | (0x0F & (int(map.find(csname[6])) >> 2)))
+        dfname.append((0xF0 & (int(map.find(csname[6])) << 6)) | (0x3F & (int(map.find(csname[7])) >> 0)))
+
+        #for i in range(6):
+        #    print("{0:02X}".format(dfname[i+5]))
+
+        dfname_str = "{0:02x} {1:02x} {2:02x} {3:02x} {4:02x} {5:02x} {6:02x} {7:02x} {8:02x} {9:02x} {10:02x}".format(
+            *dfname[0:11])
+        #print(dfname_str)
+        dfname_str2 = "{0:02x}{1:02x}{2:02x}{3:02x}{4:02x}{5:02x}{6:02x}{7:02x}{8:02x}{9:02x}{10:02x}".format(
+            *dfname[0:11])
+        crc_str = "%X" % self.bin2int(self.modes_crc(dfname_str2 + "000000", encode=True))
+        #print(crc_str)
+        # print(dfvel_str), " %X" % +"000000", encode=True))
+        # , "%X" % get_parity(hex2bin(dfvel_str+"000000"), extended=True))
+        dfname_crc = self.bin2int(self.modes_crc(dfname_str2 + "000000", encode=True))
+        dfname.append((dfname_crc >> 16) & 0xff)
+        dfname.append((dfname_crc >> 8) & 0xff)
+        dfname.append((dfname_crc) & 0xff)
+        #msg = []
+        #dfname_str = "{0:02x}{1:02x}{2:02x}{3:02x}{4:02x}{5:02x}{6:02x}{7:02x}{8:02x}{9:02x}{10:02x}".format(
+        #    *dfname[0:11])
+        #print(csname)
+        #print(decode_callsign(dfname_str))
+        return dfname
+
 ###############################################################
 
 # Copyright (C) 2015 Junzi Sun (TU Delft)

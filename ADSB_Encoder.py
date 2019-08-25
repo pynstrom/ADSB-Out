@@ -65,6 +65,7 @@ def argParser():
     parser.add_argument('--realtime', action='store', default=cfg.getboolean('general', 'realtime'), type=auto_bool, dest='realtime', help='When running a CSV which has a timestamp column whether to run in realtime following the timestamp or if just follow intermessagegap. If realtime is set it will override intermessagegap. Default: %(default)s')
     # TODO Make it so it can do a static checksum or one/two bit error
     # TODO Velocity, Heading and vertical speed as argument
+    # TODO Callsign
     return parser.parse_args()
 
 def singlePlane(arguments):
@@ -77,9 +78,12 @@ def singlePlane(arguments):
         
         df17_velocity = modes.vel_heading_encode(arguments.capability, arguments.icao, 450, 200, -1000)
         
+        df17_callsign = modes.callsign_encode(arguments.capability, arguments.icao, 'karit___')
+        
         ppm = PPM()
         df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)
         df17_array_velocity = ppm.frame_1090es_ppm_modulate(df17_velocity, df17_velocity)
+        df17_array_callsign = ppm.frame_1090es_ppm_modulate(df17_callsign, df17_callsign)
 
         hackrf = HackRF()
         #Position
@@ -94,6 +98,12 @@ def singlePlane(arguments):
         gap_array = ppm.addGap(arguments.intermessagegap)
         samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
         samples = samples+samples_array
+        #Callsign
+        samples_array = hackrf.hackrf_raw_IQ_format(df17_array_callsign)
+        samples = samples+samples_array
+        gap_array = ppm.addGap(arguments.intermessagegap)
+        samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
+        samples = samples+samples_array
     return samples
 
 def manyPlanes(arguments):
@@ -101,6 +111,7 @@ def manyPlanes(arguments):
     samples = bytearray()
     logger.info('Repeating the message %s times' % (arguments.repeats))
     prevtimestamp = 0
+    #TODO Callsign, speed, heading, vert speed in CSV
     for i in range(0, arguments.repeats):
         with open(arguments.csvfile, newline='') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=',')
@@ -145,9 +156,12 @@ def manyPlanes(arguments):
                 
                 df17_velocity = modes.vel_heading_encode(row['capability'], row['icao'], 450, 200, -1000)
                 
+                df17_callsign = modes.callsign_encode(row['capability'], row['icao'], 'karit___')
+                
                 ppm = PPM()
                 df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)
                 df17_array_velocity = ppm.frame_1090es_ppm_modulate(df17_velocity, df17_velocity)
+                df17_array_callsign = ppm.frame_1090es_ppm_modulate(df17_callsign, df17_callsign)
 
                 hackrf = HackRF()
                 #Position
@@ -158,6 +172,12 @@ def manyPlanes(arguments):
                 samples = samples+samples_array
                 #Velocity
                 samples_array = hackrf.hackrf_raw_IQ_format(df17_array_velocity)
+                samples = samples+samples_array
+                gap_array = ppm.addGap(arguments.intermessagegap)
+                samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
+                samples = samples+samples_array
+                #Callsign
+                samples_array = hackrf.hackrf_raw_IQ_format(df17_array_callsign)
                 samples = samples+samples_array
                 gap_array = ppm.addGap(arguments.intermessagegap)
                 samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
