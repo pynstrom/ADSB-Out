@@ -140,15 +140,25 @@ def manyPlanes(arguments):
                         prevtimestamp = int(row['timestamp'])
                 logger.debug('Row from CSV: %s' % (row))
                 modes = ModeS()
-                (df17_even, df17_odd) = modes.df17_pos_rep_encode(row['capability'], row['icao'], row['typecode'], row['surveillancestatus'], row['nicsupplementb'], row['altitude'], row['time'], row['latitude'], row['longitude'], row['surface'])
-
+                (df17_pos_even, df17_pos_odd) = modes.df17_pos_rep_encode(row['capability'], row['icao'], row['typecode'], row['surveillancestatus'], row['nicsupplementb'], row['altitude'], row['time'], row['latitude'], row['longitude'], row['surface'])
+                
+                df17_velocity = modes.vel_heading_encode(row['capability'], row['icao'])
+                
                 ppm = PPM()
-                df17_array = ppm.frame_1090es_ppm_modulate(df17_even, df17_odd)
+                df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)
+                df17_array_velocity = ppm.frame_1090es_ppm_modulate(df17_velocity, df17_velocity)
 
                 hackrf = HackRF()
-                samples_array = hackrf.hackrf_raw_IQ_format(df17_array)
+                #Position
+                samples_array = hackrf.hackrf_raw_IQ_format(df17_array_position)
                 samples = samples+samples_array
-                gap_array = ppm.addGap(gap)
+                gap_array = ppm.addGap(arguments.intermessagegap)
+                samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
+                samples = samples+samples_array
+                #Velocity
+                samples_array = hackrf.hackrf_raw_IQ_format(df17_array_velocity)
+                samples = samples+samples_array
+                gap_array = ppm.addGap(arguments.intermessagegap)
                 samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
                 samples = samples+samples_array
     return samples

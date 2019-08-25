@@ -103,7 +103,7 @@ class ModeS:
 
         #ca = 5
         #icao = 0xabcdef#0xa06703 #0x485020 #
-
+        
         dfvel = []
         dfvel.append((df << 3) | ca)
         dfvel.append((icao >> 16) & 0xff)
