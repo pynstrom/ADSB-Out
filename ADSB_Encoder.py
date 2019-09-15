@@ -63,10 +63,9 @@ def argParser():
     parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str, default=cfg.get('general', 'csvfile'), dest='csvfile', help='Import a CSV file with the plane data in it. Default: %(default)s')
     parser.add_argument('--intermessagegap', action='store', type=int, default=cfg.get('general', 'intermessagegap'), dest='intermessagegap', help='When repeating or reading a CSV the number of microseconds between messages. Default: %(default)s')
     parser.add_argument('--realtime', action='store', default=cfg.getboolean('general', 'realtime'), type=auto_bool, dest='realtime', help='When running a CSV which has a timestamp column whether to run in realtime following the timestamp or if just follow intermessagegap. If realtime is set it will override intermessagegap. Default: %(default)s')
-    parser.add_argument('--callsign', action='store', default=cfg.get('plane', 'callsign'), type=str, dest='callsign', help='The callsign of the aircraft. Default: %(default)s')
+    parser.add_argument('--callsign', action='store', default=cfg.get('plane', 'callsign'), type=str, dest='callsign', help='The callsign of the aircraft. Is a max of 8 characters. Default: %(default)s')
     # TODO Make it so it can do a static checksum or one/two bit error
     # TODO Velocity, Heading and vertical speed as argument
-    # TODO Callsign
     return parser.parse_args()
 
 def singlePlane(arguments):
@@ -151,13 +150,15 @@ def manyPlanes(arguments):
                         gap = int(row['timestamp']) - prevtimestamp
                         gap = gap * 100000
                         prevtimestamp = int(row['timestamp'])
+                if not 'callsign' in row.keys():
+                    row['callsign'] = arguments.callsign
                 logger.debug('Row from CSV: %s' % (row))
                 modes = ModeS()
                 (df17_pos_even, df17_pos_odd) = modes.df17_pos_rep_encode(row['capability'], row['icao'], row['typecode'], row['surveillancestatus'], row['nicsupplementb'], row['altitude'], row['time'], row['latitude'], row['longitude'], row['surface'])
                 
                 df17_velocity = modes.vel_heading_encode(row['capability'], row['icao'], 450, 200, -1000)
                 
-                df17_callsign = modes.callsign_encode(row['capability'], row['icao'], 'karit___')
+                df17_callsign = modes.callsign_encode(row['capability'], row['icao'], row['callsign'])
                 
                 ppm = PPM()
                 df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)
