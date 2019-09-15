@@ -63,6 +63,7 @@ def argParser():
     parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str, default=cfg.get('general', 'csvfile'), dest='csvfile', help='Import a CSV file with the plane data in it. Default: %(default)s')
     parser.add_argument('--intermessagegap', action='store', type=int, default=cfg.get('general', 'intermessagegap'), dest='intermessagegap', help='When repeating or reading a CSV the number of microseconds between messages. Default: %(default)s')
     parser.add_argument('--realtime', action='store', default=cfg.getboolean('general', 'realtime'), type=auto_bool, dest='realtime', help='When running a CSV which has a timestamp column whether to run in realtime following the timestamp or if just follow intermessagegap. If realtime is set it will override intermessagegap. Default: %(default)s')
+    parser.add_argument('--callsign', action='store', default=cfg.get('plane', 'callsign'), type=str, dest='callsign', help='The callsign of the aircraft. Default: %(default)s')
     # TODO Make it so it can do a static checksum or one/two bit error
     # TODO Velocity, Heading and vertical speed as argument
     # TODO Callsign
@@ -78,7 +79,7 @@ def singlePlane(arguments):
         
         df17_velocity = modes.vel_heading_encode(arguments.capability, arguments.icao, 450, 200, -1000)
         
-        df17_callsign = modes.callsign_encode(arguments.capability, arguments.icao, 'karit___')
+        df17_callsign = modes.callsign_encode(arguments.capability, arguments.icao, arguments.callsign)
         
         ppm = PPM()
         df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)

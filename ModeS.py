@@ -155,8 +155,10 @@ class ModeS:
         return dfvel
 
     #From https://github.com/jaywilhelm/ADSB-Out_Python on 2019-08-25
-    # TODO the callsign must be 8 
+    # TODO the callsign must be 8
     def callsign_encode(self, ca, icao, csname):
+        #Pad the callsign to be 8 characters
+        csname = csname.ljust(8, '_')
         if len(csname) > 8 or len(csname) <= 0:
             print ("Name length error")
             return null
