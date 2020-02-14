@@ -1,245 +1,157 @@
 #!/usr/bin/env python3
-#
 
 from HackRF import HackRF
 from PPM import PPM
 from ModeS import ModeS
-from sys import argv, exit
-import argparse
-import configparser
-import logging
-import logging.config
-import os
-import csv
+from getopt import getopt, GetoptError
+import os,csv,sys
 
-###############################################################
+class ADSB_Encoder:
+	def _set_vars(self,alt,lat,lon,capability,imgap,nicsup,rp,gnd,sstat,tc,icao,callsign,time,filename,speed,vspeed,heading):
+		self.altitude = float(alt)
+		self.callsign = callsign
+		self.capability = capability
+		self.icao = int(icao,16)
+		self.intermessagegap = imgap
+		self.latitude = float(lat)
+		self.longitude = float(lon)
+		self.nicsupplementb = nicsup
+		self.outputfilename = filename
+		self.repeats = rp
+		self.surface = gnd
+		self.surveillancestatus = sstat
+		self.time = time
+		self.typecode = tc
+		self.speed = float(speed)*0.53996
+		self.vspeed = float(vspeed)
+		while heading < 0:heading = heading + 360
+		if 0 <= float(heading) <= 89:self.heading = float(heading) + 180
+		elif 90 <= float(heading) <= 179:self.heading = float(heading)
+		elif 180 <= float(heading) <= 269:self.heading = float(heading) - 180
+		elif 270 <= float(heading) <= 359:self.heading = float(heading)
+		else:
+			if __name__ == "__main__":usage("Invalid bearing.")
 
-# Copyright (C) 2017 Linar Yusupov
+	def encode(self):
+		samples = bytearray()
+		for i in range(0, self.repeats):
+			modes = ModeS()
 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+			(df17_pos_even, df17_pos_odd) = modes.df17_pos_rep_encode(self.capability, self.icao, self.typecode, \
+				self.surveillancestatus, self.nicsupplementb, self.altitude, self.time, self.latitude, \
+				self.longitude, self.surface)
 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+			df17_velocity = modes.vel_heading_encode(self.capability, self.icao, self.speed, self.heading, self.vspeed) 
 
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+			df17_callsign = modes.callsign_encode(self.capability, self.icao, self.callsign)
 
-###############################################################
-# Further work on fork
-# Copyright (C) 2017 David Robinson
+			ppm = PPM()
+			df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)
+			df17_array_velocity = ppm.frame_1090es_ppm_modulate(df17_velocity, df17_velocity)
+			df17_array_callsign = ppm.frame_1090es_ppm_modulate(df17_callsign, df17_callsign)
 
-def auto_int(x):
-    """Parses HEX into for argParser"""
-    return int(x, 0)
-    
-def auto_bool(x):
-    if x.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif x.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
+			hackrf = HackRF()
+			#Position
+			samples_array = hackrf.hackrf_raw_IQ_format(df17_array_position)
+			samples = samples+samples_array
+			gap_array = ppm.addGap(self.intermessagegap)
+			samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
+			samples = samples+samples_array
+			#Velocity
+			samples_array = hackrf.hackrf_raw_IQ_format(df17_array_velocity)
+			samples = samples+samples_array
+			gap_array = ppm.addGap(self.intermessagegap)
+			samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
+			samples = samples+samples_array
+			#Callsign
+			samples_array = hackrf.hackrf_raw_IQ_format(df17_array_callsign)
+			samples = samples+samples_array
+			gap_array = ppm.addGap(self.intermessagegap)
+			samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
+			samples = samples+samples_array
+		return samples
 
-def argParser():
-    description = 'This tool will generate ADS-B data in a form that a hackRF can broadcast. In addition to providing the information at the command the defaults can be changed in the config.cfg file and the the logging config changed in logging.cfg.'
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-i', '--icao', action='store', type=auto_int, dest='icao', default=cfg.get('plane', 'icao'), help='The ICAO number for the plane in hex. Ensure the ICAO is prefixed with \'0x\' to ensure this is parsed as a hex number. This is 24 bits long. Default: %(default)s')
-    parser.add_argument('--lat', '--latitude', action='store', type=float, dest='latitude', default=cfg.getfloat('plane', 'latitude'), help='Latitude for the plane in decimal degrees. Default: %(default)s')
-    parser.add_argument('--lon', '--long', '--longitude', action='store', type=float, dest='longitude', default=cfg.getfloat('plane', 'longitude'), help='Longitude for the place in decimal degrees. Default: %(default)s')
-    parser.add_argument('-a', '--alt', '--altitude', action='store', type=float, dest='altitude', default=cfg.getfloat('plane', 'altitude'), help='Altitude in decimal feet. 12 bits. Default: %(default)s')
-    parser.add_argument('--ca', '--capability', action='store', type=int, dest='capability', default=cfg.getint('plane', 'capability'), help='The capability. (Think this is always 5 from ADS-B messages. More info would be appreciated). 5 indicates that the responder is capable of Communication A and B, and the plane is not on the ground. 3 bits. Default: %(default)s')
-    parser.add_argument('--tc', '--typecode', action='store', type=int, dest='typecode', default=cfg.getint('plane', 'typecode'), help='The type for the ADS-B message. 11 is an air position message. See https://adsb-decode-guide.readthedocs.io/en/latest/content/introduction.html#ads-b-message-types for more information. 5 bits. Default: %(default)s')
-    parser.add_argument('--ss', '--surveillancestatus', action='store', type=int, dest='surveillancestatus', default=cfg.getint('plane', 'surveillancestatus'), help='The surveillance status. (Think this is always 0 from ADS-B messages. More info would be appreciated).  Default: %(default)s')
-    parser.add_argument('--nicsb', '--nicsupplementb', action='store', type=int, dest='nicsupplementb', default=cfg.getint('plane', 'nicsupplementb'), help='The  NIC supplement-B.(Think this is always 0 from ADS-B messages. More info would be appreciated).  Default: %(default)s')
-    parser.add_argument('--time', action='store', type=int, dest='time', default=cfg.getint('plane', 'time'), help='0 indicates the time is not synchronous with UTC.  Default: %(default)s')
-    parser.add_argument('-s', '--surface', action='store', default=cfg.getboolean('plane', 'surface'), type=auto_bool, dest='surface', help='If the plane is on the ground or not. Default: %(default)s')
-    parser.add_argument('-o', '--out', '--output', action='store', type=str, default=cfg.get('general', 'outputfilename'), dest='outputfilename', help='The iq8s output filename. This is the file which you will feed into the hackRF. Default: %(default)s')
-    parser.add_argument('-r', '--repeats', action='store', dest='repeats', type=int, default=cfg.getint('general', 'repeats'), help='How many repeats of the data to perform. Default: %(default)s')
-    parser.add_argument('--csv', '--csvfile', '--in', '--input', action='store', type=str, default=cfg.get('general', 'csvfile'), dest='csvfile', help='Import a CSV file with the plane data in it. Default: %(default)s')
-    parser.add_argument('--intermessagegap', action='store', type=int, default=cfg.get('general', 'intermessagegap'), dest='intermessagegap', help='When repeating or reading a CSV the number of microseconds between messages. Default: %(default)s')
-    parser.add_argument('--realtime', action='store', default=cfg.getboolean('general', 'realtime'), type=auto_bool, dest='realtime', help='When running a CSV which has a timestamp column whether to run in realtime following the timestamp or if just follow intermessagegap. If realtime is set it will override intermessagegap. Default: %(default)s')
-    parser.add_argument('--callsign', action='store', default=cfg.get('plane', 'callsign'), type=str, dest='callsign', help='The callsign of the aircraft. Is a max of 8 characters. Default: %(default)s')
-    # TODO Make it so it can do a static checksum or one/two bit error
-    # TODO Velocity, Heading and vertical speed as argument
-    return parser.parse_args()
+	def writeOutputFile(self, data):
+		tmpfile = '%s.tmp'%(self.outputfilename)
+		SamplesFile = open(tmpfile, 'wb')
+		SamplesFile.write(data)
+		SamplesFile.close()
+		os.system('sync')
+		os.system('rm -rf %s' % (self.outputfilename))
+		os.system("dd if=%s of=%s bs=4k seek=63 > /dev/null 2>&1" % (tmpfile, self.outputfilename))
+		os.system('sync')
+		os.system('rm %s'%(tmpfile))
 
-def singlePlane(arguments):
-    logger.info('Processing default and command line options for a single plane')
-    logger.info('Repeating the message %s times' % (arguments.repeats))
-    samples = bytearray()
-    for i in range(0, arguments.repeats):
-        modes = ModeS()
-        (df17_pos_even, df17_pos_odd) = modes.df17_pos_rep_encode(arguments.capability, arguments.icao, arguments.typecode, arguments.surveillancestatus, arguments.nicsupplementb, arguments.altitude, arguments.time, arguments.latitude, arguments.longitude, arguments.surface)
-        
-        df17_velocity = modes.vel_heading_encode(arguments.capability, arguments.icao, 450, 200, -1000)
-        
-        df17_callsign = modes.callsign_encode(arguments.capability, arguments.icao, arguments.callsign)
-        
-        ppm = PPM()
-        df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)
-        df17_array_velocity = ppm.frame_1090es_ppm_modulate(df17_velocity, df17_velocity)
-        df17_array_callsign = ppm.frame_1090es_ppm_modulate(df17_callsign, df17_callsign)
 
-        hackrf = HackRF()
-        #Position
-        samples_array = hackrf.hackrf_raw_IQ_format(df17_array_position)
-        samples = samples+samples_array
-        gap_array = ppm.addGap(arguments.intermessagegap)
-        samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
-        samples = samples+samples_array
-        #Velocity
-        samples_array = hackrf.hackrf_raw_IQ_format(df17_array_velocity)
-        samples = samples+samples_array
-        gap_array = ppm.addGap(arguments.intermessagegap)
-        samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
-        samples = samples+samples_array
-        #Callsign
-        samples_array = hackrf.hackrf_raw_IQ_format(df17_array_callsign)
-        samples = samples+samples_array
-        gap_array = ppm.addGap(arguments.intermessagegap)
-        samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
-        samples = samples+samples_array
-    return samples
-
-def manyPlanes(arguments):
-    logger.info('Processing CSV file: %s' % (arguments.csvfile))
-    samples = bytearray()
-    logger.info('Repeating the message %s times' % (arguments.repeats))
-    prevtimestamp = 0
-    #TODO Callsign, speed, heading, vert speed in CSV
-    for i in range(0, arguments.repeats):
-        with open(arguments.csvfile, newline='') as csvfile:
-            reader = csv.DictReader(csvfile, delimiter=',')
-            for row in reader:
-                gap = arguments.intermessagegap
-                if not 'icao' in row.keys():
-                    row['icao'] = arguments.icao
-                else:
-                    row['icao'] = int(row['icao'], 0)
-                if not 'latitude' in row.keys():
-                    row['latitude'] = arguments.latitude
-                else:
-                    row['latitude'] = float(row['latitude'])
-                if not 'longitude' in row.keys():
-                    row['longitude'] = arguments.longitude
-                else:
-                    row['longitude'] = float(row['longitude'])
-                if not 'altitude' in row.keys():
-                    row['altitude'] = arguments.altitude
-                else:
-                    row['altitude'] = float(row['altitude'])
-                if not 'capability' in row.keys():
-                    row['capability'] = arguments.capability
-                if not 'typecode' in row.keys():
-                    row['typecode'] = arguments.typecode
-                if not 'surveillancestatus' in row.keys():
-                    row['surveillancestatus'] = arguments.surveillancestatus
-                if not 'nicsupplementb' in row.keys():
-                    row['nicsupplementb'] = arguments.nicsupplementb
-                if not 'time' in row.keys():
-                    row['time'] = arguments.time
-                if not 'surface' in row.keys():
-                    row['surface'] = arguments.surface
-                if 'timestamp' in row.keys():
-                    if arguments.realtime:
-                        gap = int(row['timestamp']) - prevtimestamp
-                        gap = gap * 100000
-                        prevtimestamp = int(row['timestamp'])
-                if not 'callsign' in row.keys():
-                    row['callsign'] = arguments.callsign
-                logger.debug('Row from CSV: %s' % (row))
-                modes = ModeS()
-                (df17_pos_even, df17_pos_odd) = modes.df17_pos_rep_encode(row['capability'], row['icao'], row['typecode'], row['surveillancestatus'], row['nicsupplementb'], row['altitude'], row['time'], row['latitude'], row['longitude'], row['surface'])
-                
-                df17_velocity = modes.vel_heading_encode(row['capability'], row['icao'], 450, 200, -1000)
-                
-                df17_callsign = modes.callsign_encode(row['capability'], row['icao'], row['callsign'])
-                
-                ppm = PPM()
-                df17_array_position = ppm.frame_1090es_ppm_modulate(df17_pos_even, df17_pos_odd)
-                df17_array_velocity = ppm.frame_1090es_ppm_modulate(df17_velocity, df17_velocity)
-                df17_array_callsign = ppm.frame_1090es_ppm_modulate(df17_callsign, df17_callsign)
-
-                hackrf = HackRF()
-                #Position
-                samples_array = hackrf.hackrf_raw_IQ_format(df17_array_position)
-                samples = samples+samples_array
-                gap_array = ppm.addGap(arguments.intermessagegap)
-                samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
-                samples = samples+samples_array
-                #Velocity
-                samples_array = hackrf.hackrf_raw_IQ_format(df17_array_velocity)
-                samples = samples+samples_array
-                gap_array = ppm.addGap(arguments.intermessagegap)
-                samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
-                samples = samples+samples_array
-                #Callsign
-                samples_array = hackrf.hackrf_raw_IQ_format(df17_array_callsign)
-                samples = samples+samples_array
-                gap_array = ppm.addGap(arguments.intermessagegap)
-                samples_array = hackrf.hackrf_raw_IQ_format(gap_array)
-                samples = samples+samples_array
-    return samples
-
-def writeOutputFile(filename, data):
-    tmpfile = '%s.tmp'%(filename)
-    logger.info('Writing %s file'%(tmpfile))
-    SamplesFile = open(tmpfile, 'wb')
-    SamplesFile.write(data)
-    SamplesFile.close()
-    os.system('sync')
-    os.system('rm %s' % (filename))
-    logger.info('dd for file: %s' % (filename))
-    os.system("dd if=%s of=%s bs=4k seek=63 > /dev/null 2>&1" % (tmpfile, filename))
-    os.system('sync')
-    os.system('rm %s'%(tmpfile))
+def usage(msg=False):
+	if msg:print(msg)
+	print("Usage: %s [options]\n" % sys.argv[0])
+	print("-h | --help              Display help message.")
+	print("-i | --icao <opt>        Callsign in hex, Default:0x75008F")
+	print("--lat <opt>              Latitude for the plane in decimal degrees..")
+	print("--long <opt>             Longitude for the place in decimal degrees.")
+	print("-a | --altitude <opt>    Altitude in decimal feet, Default:27000.0")
+	print("-s | --speed <opt>       Airspeed in decimal kph, Default:300")
+	print("-v | --vspeed <opt>      Vertical speed, Default:0")
+	print("-b | --bearing <opt>     Bearing in decimal degrees. Default:0")
+	print("-c | --callsign <opt>    Callsign (8 chars max), Default:pynny")
+	print("-t | --time <opt>        0 indicates time not synchronous with UTC, Default:0")
+	print("-r | --repeats <opt>     Number of tx repeats, Default:1")
+	print("-o | --output <opt>      iq8s output filename. Default:Samples_256K.iq8s")
+	print("--capability <opt>       Capability, Default:5")
+	print("--typecode <opt>         ADS-B message type, Default:11")
+	print("--sstatus <opt>          Surveillance status, Default:0")
+	print("--nicsupplementb <opt>   NIC supplement-B, Default:0")
+	print("--intermessagegap <opt>  Delay between csv output(microSec), Default:99564")
+	print("--surface                Aircraft located on ground, Default:False")
+	print("")
+	sys.exit(2)
 
 def main():
-    global cfg
-    cfg = configparser.ConfigParser()
-    cfg.read('config.cfg')
-    
-    arguments = argParser()
-    
-    global logger
-    logging.config.fileConfig('logging.cfg')
-    logger = logging.getLogger(__name__)
-    logger.info('Starting ADSB Encoder')
-    logger.debug('The arguments: %s' % (arguments))
-    data = None
-    if arguments.csvfile == '':
-        data = singlePlane(arguments)
-    else:
-        data = manyPlanes(arguments)
-    writeOutputFile(arguments.outputfilename, data)
-    logger.info('Complete')
+	alt,lat,lon,capability,imgap,nicsup,rp,gnd,sstat,tc,icao,callsign,time,filename,speed,vspeed,heading = \
+		27000,38.919909,-75.5884171,5,99564,0,1,False,0,11,'0x75008F','pynny',0,'Samples_256K.iq8s',300,0,0
+	try:
+		(opts, args) = getopt(sys.argv[1:], 'hi:a:s:v:b:c:t:r:o:', \
+			['help','icao=','lat=','long=','altitude=','speed=','vspeed=','bearing=','callsign=',
+			'time=','repeats=','output=','surface','capability=','typecode=','sstatus=',
+			'nicsupplementb=','intermessagegap='])
+	except GetoptError as err:
+		usage("%s\n" % err)
+	if len(opts) != 0:
+		for (opt, arg) in opts:
+			if opt in ('-h', '--help'):usage()
+			elif opt in ('-a', '--altitude'):alt = arg
+			elif opt in ('--lat'):lat = arg
+			elif opt in ('--long'):lon = arg
+			elif opt in ('-i', '--icao'):icao = arg
+			elif opt in ('-s', '--speed'):speed = arg
+			elif opt in ('-v', '--vspeed'):vspeed = arg
+			elif opt in ('-b', '--bearing'):heading = arg
+			elif opt in ('-c', '--callsign'):callsign = arg
+			elif opt in ('-t', '--time'):time = arg
+			elif opt in ('-r', '--repeats'):repeats = arg
+			elif opt in ('-o', '--output'):filename = arg
+			elif opt in ('--capability'):capability = arg
+			elif opt in ('--typecode'):tc = arg
+			elif opt in ('--sstatus'):sstat = arg
+			elif opt in ('--nicsupplementb'):nicsup = arg
+			elif opt in ('--intermessagegap'):imgap = arg
+			elif opt in ('--surface'):gnd = True
+			else:usage("Unknown option %s\n" % opt)
 
-def threadingCSV(csv):
-    global cfg
-    cfg = configparser.ConfigParser()
-    cfg.read('config.cfg')
-    arguments = argParser()
-    arguments.csvfile = csv['csv']
-    arguments.outputfilename = csv['out']
-    global logger
-    logging.config.fileConfig('logging.cfg')
-    logger = logging.getLogger(__name__)
-    logger.info('Starting ADSB Encoder threadingCSV entry point')
-    logger.debug('Being called with the following CSV file: %s' % (arguments.csvfile))
-    logger.debug('The arguments: %s' % (arguments))
-    data = None
-    if arguments.csvfile == '':
-        data = singlePlane(arguments)
-    else:
-        data = manyPlanes(arguments)
-    writeOutputFile(arguments.outputfilename, data)
-    logger.info('Complete')
-    
+	encoder = ADSB_Encoder()
+	encoder._set_vars(alt,lat,lon,capability,imgap,nicsup,rp,gnd,sstat,tc,icao,callsign,time,filename,speed,vspeed,heading)
+
+	#attrs = vars(encoder)
+	#print(', '.join("%s: %s" % item for item in attrs.items()))
+
+	data = encoder.encode()
+	encoder.writeOutputFile(data)
+
 if __name__ == "__main__":
-    main()
-    
+	main()
+
+
+
+
+
