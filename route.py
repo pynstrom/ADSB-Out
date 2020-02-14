@@ -168,7 +168,7 @@ def main(argv=None):
 
 	file.close()
 	os.chmod("%s/tx_samples.py"%name,0o755)
-	print("Transmit script written %s/tx_samples.py"%name)
+	if verbose:print("Transmit script written %s/tx_samples.py"%name)
 
 	encoder = ADSB_Encoder()
 
@@ -179,9 +179,9 @@ def main(argv=None):
 		curName = "%s/%s" % (name,coord[3])
 
 		encoder._set_vars(coord[2],coord[0],coord[1],5,99564,0,2,False,0,11,icao,callsign,0,curName,speed,0,coord[4])
-		print("Encoding %s of %s" % (i+1, len(coords)))
+		if verbose:print("Encoding %s of %s" % (i+1, len(coords)))
 		data = encoder.encode()
-		print("Writing %s/%s" % (name,coord[3]))
+		if verbose:print("Writing %s/%s" % (name,coord[3]))
 		encoder.writeOutputFile(data)
 
 
