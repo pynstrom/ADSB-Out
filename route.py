@@ -7,6 +7,7 @@ from ADSB_Encoder import ADSB_Encoder
 from HackRF import HackRF
 from PPM import PPM
 from ModeS import ModeS
+from time import time
 
 def usage(msg=False):
 	if msg:print(msg)
@@ -23,7 +24,15 @@ def usage(msg=False):
 	print("-n | --name        Unique name for file creation, Default:myRoute")
 	print("-c | --callsign    Callsign, Default: pynny")
 	print("")
-	sys.exit(2)
+	sys.exit(0)
+
+def format_time(sec):
+	hrs,hrm = int(sec/3600),sec%3600
+	mns,sns = int(hrm/60),int(hrm%60)
+	if len(str(hrs)) < 2:hrs = "0%s"%hrs
+	if len(str(mns)) < 2:mns = "0%s"%mns
+	if len(str(sns)) < 2:sns = "0%s"%sns
+	return "%s:%s:%s"%(hrs,mns,sns)
 
 def verify_coordinate(point):
     if len(point) != 2:
@@ -128,7 +137,7 @@ def main(argv=None):
 	os.mkdir(name)
 
 	file = open("%s/tx_samples.py"%name,"w+")
-	baseCmd1,baseCmd2 = "hackrf_transfer -t "," -f 1090000000 -s 2000000 -x 20"
+	baseCmd1,baseCmd2 = "hackrf_transfer -t "," -f 1090000000 -s 2000000 -x 30"
 	file.write("#!/usr/bin/env python3\n\r")
 	file.write("from os import system\n\r")
 	file.write("import threading, time\n\n\r")
@@ -168,10 +177,10 @@ def main(argv=None):
 
 	file.close()
 	os.chmod("%s/tx_samples.py"%name,0o755)
-	if verbose:print("Transmit script written %s/tx_samples.py"%name)
+	print("Transmit script written %s/tx_samples.py"%name)
 
 	encoder = ADSB_Encoder()
-
+	startTime = time()
 	for i,coord in enumerate(coords):
 		if i == (len(coords) - 1):coords[i].append(round(final_bearing((coords[i-1][0],coords[i-1][1]),(coord[0],coord[1]))))
 		else:coords[i].append(round(init_bearing((coord[0],coord[1]),(coords[i+1][0],coords[i+1][1]))))
@@ -183,7 +192,7 @@ def main(argv=None):
 		data = encoder.encode()
 		if verbose:print("Writing %s/%s" % (name,coord[3]))
 		encoder.writeOutputFile(data)
-
+	print("%s coordinates encoded in %s"%(len(coords),format_time(time()-startTime)))
 
 if __name__ == "__main__":
 	main()
