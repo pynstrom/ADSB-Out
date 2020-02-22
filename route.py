@@ -137,7 +137,7 @@ def main(argv=None):
 	os.mkdir(name)
 
 	file = open("%s/tx_samples.py"%name,"w+")
-	baseCmd1,baseCmd2 = "hackrf_transfer -t "," -f 1090000000 -s 2000000 -x 30"
+	baseCmd1,baseCmd2 = "hackrf_transfer -t "," -f 975000000 -s 2000000 -x 30"
 	file.write("#!/usr/bin/env python3\n\r")
 	file.write("from os import system\n\r")
 	file.write("import threading, time\n\n\r")
